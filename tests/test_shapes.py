@@ -47,3 +47,22 @@ class TestDrawRectangle:
         assert_pixel(img, 50, 24, (34, 197, 94))
         # 10 pixels inside the top edge should be white again
         assert_pixel_unchanged(img, 50, 32)
+
+
+from image_annotator_mcp.models import Circle
+from image_annotator_mcp.shapes import draw_circle
+
+
+class TestDrawCircle:
+    def test_hollow_default_green(self):
+        shape = Circle(type="circle", x=100, y=50, radius=30)
+        img = _draw_on_blank(shape, draw_circle)
+        # Point on the circumference should be green
+        assert_pixel(img, 130, 50, (34, 197, 94))
+        # Center should be white (hollow)
+        assert_pixel_unchanged(img, 100, 50)
+
+    def test_filled_blue(self):
+        shape = Circle(type="circle", x=100, y=50, radius=30, color="blue", fill="blue")
+        img = _draw_on_blank(shape, draw_circle)
+        assert_pixel(img, 100, 50, (0, 0, 255))
