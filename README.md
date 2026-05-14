@@ -9,11 +9,31 @@ screenshots, navigate, click, or read the DOM — that's Playwright MCP's job.
 
 ## Install
 
+This package is not on PyPI — install directly from GitHub.
+
+### Claude Code
+
 ```bash
-uvx image-annotator-mcp
+claude mcp add image-annotator -- uvx --from git+https://github.com/osama1998H/proline.git image-annotator-mcp
 ```
 
-Or, from this checkout:
+### Codex
+
+Add to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.image-annotator]
+command = "uvx"
+args = ["--from", "git+https://github.com/osama1998H/proline.git", "image-annotator-mcp"]
+```
+
+### Standalone
+
+```bash
+uvx --from git+https://github.com/osama1998H/proline.git image-annotator-mcp
+```
+
+### From a local checkout
 
 ```bash
 uv venv
