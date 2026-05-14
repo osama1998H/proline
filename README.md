@@ -67,7 +67,8 @@ coords into this MCP, set:
 ```
 
 …with `device_scale` equal to the active `deviceScaleFactor`. The MCP will
-scale every coordinate, line width, and radius. If your screenshot was taken
+scale every coordinate, plus every size-like field: `line_width`, `radius`,
+`font_size`, `head_size`, and `padding`. If your screenshot was taken
 at 1× (or you've already converted to image-pixel coords), leave
 `coordinate_space` at its default of `"image"`.
 
