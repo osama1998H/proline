@@ -66,3 +66,17 @@ class TestDrawCircle:
         shape = Circle(type="circle", x=100, y=50, radius=30, color="blue", fill="blue")
         img = _draw_on_blank(shape, draw_circle)
         assert_pixel(img, 100, 50, (0, 0, 255))
+
+
+from image_annotator_mcp.models import Line
+from image_annotator_mcp.shapes import draw_line
+
+
+class TestDrawLine:
+    def test_horizontal_red(self):
+        shape = Line(type="line", x1=10, y1=50, x2=190, y2=50, color="red", line_width=2)
+        img = _draw_on_blank(shape, draw_line)
+        # On-line pixel is red
+        assert_pixel(img, 100, 50, (255, 0, 0))
+        # Off-line pixel is white
+        assert_pixel_unchanged(img, 100, 20)

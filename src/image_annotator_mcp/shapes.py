@@ -3,7 +3,7 @@ from __future__ import annotations
 from PIL import ImageDraw
 
 from .colors import resolve_color
-from .models import Circle, Rectangle
+from .models import Circle, Line, Rectangle
 
 
 def draw_rectangle(draw: ImageDraw.ImageDraw, shape: Rectangle) -> None:
@@ -38,3 +38,12 @@ def draw_circle(draw: ImageDraw.ImageDraw, shape: Circle) -> None:
         shape.y + shape.radius,
     )
     draw.ellipse(box, outline=outline, fill=fill, width=shape.line_width)
+
+
+def draw_line(draw: ImageDraw.ImageDraw, shape: Line) -> None:
+    color = resolve_color(shape.color)
+    draw.line(
+        (shape.x1, shape.y1, shape.x2, shape.y2),
+        fill=color,
+        width=shape.line_width,
+    )
