@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import base64
+import json
 import shutil
 from pathlib import Path
 
 import pytest
 from PIL import Image
 
-from image_annotator_mcp.server import annotate_image_tool
+from image_annotator_mcp.server import annotate_image, annotate_image_tool
 
 SAMPLE_SOURCE = Path(__file__).resolve().parents[1] / "samples" / "hourly.jpg"
 
@@ -102,6 +103,56 @@ def test_output_parent_must_exist(blank_white, tmp_path):
             output_path=str(missing_dir),
             annotations=[{"type": "rectangle", "x": 1, "y": 1, "width": 2, "height": 2}],
         )
+
+
+class TestMcpToolReturnShape:
+    """v0.1.1 regression tests.
+
+    v0.1.0 made the @mcp.tool wrapper return a dict whose `image.data` was a
+    base64 string. FastMCP serialised that dict as a single giant TextContent
+    block (315 KB for a 1568x1000 PNG), which blew through the host's text-
+    token limit. The fix is to return [TextContent(metadata), Image(bytes)]
+    so the image flows through MCP's media channel instead.
+    """
+
+    def test_returns_list_of_content_blocks(self, blank_white):
+        from mcp.server.fastmcp.utilities.types import Image as MCPImage
+        from mcp.types import TextContent
+
+        result = annotate_image(
+            annotations=[{"type": "rectangle", "x": 10, "y": 10, "width": 30, "height": 30}],
+            input_path=str(blank_white),
+        )
+        assert isinstance(result, list), f"expected list, got {type(result).__name__}"
+        assert len(result) == 2
+        text_block, image_block = result
+        assert isinstance(text_block, TextContent)
+        # The metadata text must be small JSON — NOT the old 315 KB base64 blob.
+        assert len(text_block.text) < 1000, f"metadata text grew to {len(text_block.text)} chars"
+        meta = json.loads(text_block.text)
+        assert "saved_path" in meta
+        assert meta["width"] == 200
+        assert meta["height"] == 100
+        # The image flows as proper FastMCP Image (raw bytes), not as a base64 string.
+        assert isinstance(image_block, MCPImage)
+        assert image_block.data is not None
+        assert image_block.data[:8] == b"\x89PNG\r\n\x1a\n"  # PNG magic
+
+    def test_include_image_false_omits_image_block(self, blank_white):
+        from mcp.types import TextContent
+
+        result = annotate_image(
+            annotations=[{"type": "rectangle", "x": 10, "y": 10, "width": 30, "height": 30}],
+            input_path=str(blank_white),
+            include_image=False,
+        )
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert isinstance(result[0], TextContent)
+        meta = json.loads(result[0].text)
+        assert "saved_path" in meta
+        # File is still written to disk even when inline image is suppressed.
+        assert Path(meta["saved_path"]).exists()
 
 
 @pytest.mark.skipif(not SAMPLE_SOURCE.exists(), reason="reference sample not present")

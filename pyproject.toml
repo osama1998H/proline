@@ -1,6 +1,6 @@
 [project]
 name = "image-annotator-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "MCP server that draws annotation shapes (rectangle, circle, arrow, line, text, numbered callout) onto screenshots."
 requires-python = ">=3.11"
 dependencies = [

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import base64
+import json
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Literal, Optional
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.utilities.types import Image as MCPImage
+from mcp.types import TextContent
 from PIL import Image
 
 from .annotate import annotate_image_bytes
@@ -72,7 +75,10 @@ def annotate_image_tool(
         "onto an image and return the annotated copy. Designed for QA agents that have "
         "captured a screenshot with Playwright MCP and want to mark up the regions they "
         "verified. Coordinates default to image-pixel space; pass coordinate_space='css' "
-        "with device_scale=<deviceScaleFactor> when using Playwright boundingBox() coords."
+        "with device_scale=<deviceScaleFactor> when using Playwright boundingBox() coords. "
+        "Returns a TextContent block with the saved path / dimensions and an inline "
+        "ImageContent block with the annotated image; set include_image=false to skip "
+        "the inline image when running in batch."
     ),
 )
 def annotate_image(
@@ -83,8 +89,14 @@ def annotate_image(
     output_format: Literal["png", "jpeg"] = "png",
     coordinate_space: Literal["image", "css"] = "image",
     device_scale: Optional[float] = None,
-) -> dict[str, Any]:
-    return annotate_image_tool(
+    include_image: bool = True,
+):
+    # Route the image bytes through MCP's media channel (Image -> ImageContent),
+    # NOT through structuredContent or a giant TextContent. See docs/superpowers/
+    # plans -- v0.1.0 served the image as a base64 string inside a dict, which
+    # FastMCP serialised as a single TextContent block (~315 KB for a 1568x1000
+    # PNG) and overflowed the host's text-token limit.
+    result = annotate_image_tool(
         input_path=input_path,
         input_base64=input_base64,
         output_path=output_path,
@@ -93,6 +105,16 @@ def annotate_image(
         device_scale=device_scale,
         annotations=annotations,
     )
+    metadata = {
+        "saved_path": result["saved_path"],
+        "width": result["width"],
+        "height": result["height"],
+    }
+    blocks: list = [TextContent(type="text", text=json.dumps(metadata))]
+    if include_image:
+        raw_bytes = base64.b64decode(result["image"]["data"])
+        blocks.append(MCPImage(data=raw_bytes, format=output_format))
+    return blocks
 
 
 def main() -> None:
