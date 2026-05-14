@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import base64
+import shutil
 from pathlib import Path
 
 import pytest
 from PIL import Image
 
 from image_annotator_mcp.server import annotate_image_tool
+
+SAMPLE_SOURCE = Path(__file__).resolve().parents[1] / "samples" / "hourly.jpg"
 
 
 def test_writes_to_explicit_output_path(blank_white, tmp_path):
@@ -99,3 +102,25 @@ def test_output_parent_must_exist(blank_white, tmp_path):
             output_path=str(missing_dir),
             annotations=[{"type": "rectangle", "x": 1, "y": 1, "width": 2, "height": 2}],
         )
+
+
+@pytest.mark.skipif(not SAMPLE_SOURCE.exists(), reason="reference sample not present")
+def test_smoke_annotate_real_screenshot(tmp_path):
+    # Copy the sample so we don't write next to it.
+    work = tmp_path / "hourly.png"
+    Image.open(SAMPLE_SOURCE).convert("RGB").save(work)
+
+    result = annotate_image_tool(
+        input_path=str(work),
+        annotations=[
+            {"type": "rectangle", "x": 220, "y": 195, "width": 70, "height": 30, "color": "green", "line_width": 4},
+            {"type": "rectangle", "x": 398, "y": 195, "width": 95, "height": 30, "color": "green", "line_width": 4},
+            {"type": "text", "x": 230, "y": 160, "text": "verified", "color": "red", "font_size": 14},
+        ],
+    )
+    saved = Path(result["saved_path"])
+    assert saved.exists()
+    img = Image.open(saved).convert("RGB")
+    # Pixel on the first rectangle's top edge should be green-ish.
+    px = img.getpixel((250, 195))
+    assert px[1] > px[0] and px[1] > px[2], f"expected green border, got {px}"
