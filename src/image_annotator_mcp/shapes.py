@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import math
+
 from PIL import ImageDraw
 
 from .colors import resolve_color
-from .models import Circle, Line, Rectangle
+from .models import Arrow, Circle, Line, Rectangle
 
 
 def draw_rectangle(draw: ImageDraw.ImageDraw, shape: Rectangle) -> None:
@@ -47,3 +49,28 @@ def draw_line(draw: ImageDraw.ImageDraw, shape: Line) -> None:
         fill=color,
         width=shape.line_width,
     )
+
+
+def draw_arrow(draw: ImageDraw.ImageDraw, shape: Arrow) -> None:
+    color = resolve_color(shape.color)
+    # Shaft
+    draw.line(
+        (shape.x1, shape.y1, shape.x2, shape.y2),
+        fill=color,
+        width=shape.line_width,
+    )
+    # Head: filled isoceles triangle at the destination, pointing along the shaft.
+    dx = shape.x2 - shape.x1
+    dy = shape.y2 - shape.y1
+    length = math.hypot(dx, dy)
+    if length == 0:
+        return  # zero-length arrow: nothing more to draw
+    ux, uy = dx / length, dy / length  # unit vector along shaft
+    px, py = -uy, ux                    # unit vector perpendicular to shaft
+    base_cx = shape.x2 - ux * shape.head_size
+    base_cy = shape.y2 - uy * shape.head_size
+    half_width = shape.head_size * 0.6
+    left = (round(base_cx + px * half_width), round(base_cy + py * half_width))
+    right = (round(base_cx - px * half_width), round(base_cy - py * half_width))
+    tip = (shape.x2, shape.y2)
+    draw.polygon([left, right, tip], fill=color, outline=color)

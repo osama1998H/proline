@@ -80,3 +80,24 @@ class TestDrawLine:
         assert_pixel(img, 100, 50, (255, 0, 0))
         # Off-line pixel is white
         assert_pixel_unchanged(img, 100, 20)
+
+
+from image_annotator_mcp.models import Arrow
+from image_annotator_mcp.shapes import draw_arrow
+
+
+class TestDrawArrow:
+    def test_horizontal_arrow_has_line_and_head(self):
+        shape = Arrow(
+            type="arrow", x1=20, y1=50, x2=180, y2=50,
+            color="red", line_width=3, head_size=10,
+        )
+        img = _draw_on_blank(shape, draw_arrow)
+        # Somewhere along the shaft is red
+        assert_pixel(img, 100, 50, (255, 0, 0))
+        # The head tip area (just before x2) is red
+        assert_pixel(img, 178, 50, (255, 0, 0))
+        # Below the head, a few pixels off the shaft, is red (because the head triangle widens)
+        assert_pixel(img, 172, 53, (255, 0, 0))
+        # Well above the shaft is white
+        assert_pixel_unchanged(img, 100, 20)
