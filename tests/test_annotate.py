@@ -91,3 +91,47 @@ def test_unknown_input_path_raises(tmp_path):
     )
     with pytest.raises(FileNotFoundError):
         annotate_image_bytes(payload)
+
+
+def test_jpeg_with_alpha_rejected(blank_white):
+    payload = AnnotateImageInput(
+        input_path=str(blank_white),
+        output_format="jpeg",
+        annotations=[{"type": "rectangle", "x": 1, "y": 1, "width": 2, "height": 2, "color": "#22C55E80"}],
+    )
+    with pytest.raises(ValueError) as exc:
+        annotate_image_bytes(payload)
+    assert "alpha" in str(exc.value).lower()
+
+
+def test_jpeg_with_solid_color_ok(blank_white):
+    payload = AnnotateImageInput(
+        input_path=str(blank_white),
+        output_format="jpeg",
+        annotations=[{"type": "rectangle", "x": 1, "y": 1, "width": 2, "height": 2, "color": "#22C55E"}],
+    )
+    out_bytes = annotate_image_bytes(payload)
+    assert out_bytes[:2] == b"\xff\xd8"  # JPEG magic
+
+
+def test_annotation_fully_off_canvas_rejected(blank_white):
+    # blank_white is 200x100. This rectangle lives at (500..530, 500..530), fully off.
+    payload = AnnotateImageInput(
+        input_path=str(blank_white),
+        annotations=[{"type": "rectangle", "x": 500, "y": 500, "width": 30, "height": 30}],
+    )
+    with pytest.raises(ValueError) as exc:
+        annotate_image_bytes(payload)
+    assert "outside" in str(exc.value).lower() or "bounds" in str(exc.value).lower()
+
+
+def test_annotation_partially_off_canvas_ok(blank_white):
+    # Rectangle straddles the right edge of the 200x100 image.
+    payload = AnnotateImageInput(
+        input_path=str(blank_white),
+        annotations=[{"type": "rectangle", "x": 180, "y": 10, "width": 40, "height": 30, "color": "red"}],
+    )
+    out_bytes = annotate_image_bytes(payload)
+    img = Image.open(BytesIO(out_bytes)).convert("RGB")
+    # The visible portion of the rectangle's border is red.
+    assert img.getpixel((180, 10))[0] > 180

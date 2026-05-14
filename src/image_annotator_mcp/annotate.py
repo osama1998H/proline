@@ -7,6 +7,7 @@ from typing import Callable
 
 from PIL import Image, ImageDraw
 
+from .colors import resolve_color
 from .models import (
     AnnotateImageInput,
     Annotation,
@@ -28,16 +29,66 @@ from .shapes import (
 )
 
 
+def _bbox_of(ann: Annotation) -> tuple[int, int, int, int]:
+    """Image-space axis-aligned bounding box of an annotation. Coords are inclusive of the
+    drawn area: line width is accounted for by inflating by line_width/2 + 1 where applicable.
+    """
+    if isinstance(ann, Rectangle):
+        pad = ann.line_width
+        return (ann.x - pad, ann.y - pad, ann.x + ann.width + pad, ann.y + ann.height + pad)
+    if isinstance(ann, Circle):
+        pad = ann.line_width
+        return (ann.x - ann.radius - pad, ann.y - ann.radius - pad,
+                ann.x + ann.radius + pad, ann.y + ann.radius + pad)
+    if isinstance(ann, (Arrow, Line)):
+        head = ann.head_size if isinstance(ann, Arrow) else 0
+        pad = ann.line_width + head
+        return (min(ann.x1, ann.x2) - pad, min(ann.y1, ann.y2) - pad,
+                max(ann.x1, ann.x2) + pad, max(ann.y1, ann.y2) + pad)
+    if isinstance(ann, Text):
+        # Conservative: assume each character is ~font_size wide
+        width_est = max(1, len(ann.text) * ann.font_size)
+        return (ann.x, ann.y, ann.x + width_est, ann.y + ann.font_size)
+    if isinstance(ann, NumberedCallout):
+        return (ann.x - ann.radius, ann.y - ann.radius, ann.x + ann.radius, ann.y + ann.radius)
+    raise TypeError(f"no bbox rule for {type(ann).__name__}")
+
+
 def annotate_image_bytes(payload: AnnotateImageInput) -> bytes:
     """Apply annotations to an image and return the encoded output bytes.
 
     Does not write to disk. The caller (server.py) handles output paths.
     """
+    # JPEG + alpha pre-check (cheap, runs before opening the image).
+    if payload.output_format == "jpeg":
+        for ann in payload.annotations:
+            for field in ("color", "fill", "background"):
+                value = getattr(ann, field, None)
+                if value is None:
+                    continue
+                rgba = resolve_color(value)
+                if rgba[3] != 255:
+                    raise ValueError(
+                        f"output_format='jpeg' is incompatible with alpha < 255 on annotation field {field!r}"
+                    )
+
     img = _open_input(payload).convert("RGBA")
+    img_w, img_h = img.size
+    scaled = [_scale(ann, payload.coordinate_space, payload.device_scale) for ann in payload.annotations]
+
+    # Out-of-bounds pre-check (runs after scaling so CSS-space annotations are checked in image space).
+    for idx, ann in enumerate(scaled):
+        bx1, by1, bx2, by2 = _bbox_of(ann)
+        # Standard interval overlap test:
+        if bx2 < 0 or by2 < 0 or bx1 > img_w or by1 > img_h:
+            raise ValueError(
+                f"annotation[{idx}] of type {ann.type!r} lies fully outside the image bounds "
+                f"(image is {img_w}x{img_h}, annotation bbox is {(bx1, by1, bx2, by2)})"
+            )
+
     draw = ImageDraw.Draw(img, "RGBA")
-    for ann in payload.annotations:
-        scaled = _scale(ann, payload.coordinate_space, payload.device_scale)
-        _dispatch(draw, scaled)
+    for ann in scaled:
+        _dispatch(draw, ann)
     out = BytesIO()
     fmt = "PNG" if payload.output_format == "png" else "JPEG"
     flat = img if fmt == "PNG" else img.convert("RGB")
