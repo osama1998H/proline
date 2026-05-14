@@ -5,7 +5,8 @@ import math
 from PIL import ImageDraw
 
 from .colors import resolve_color
-from .models import Arrow, Circle, Line, Rectangle
+from .fonts import load_font
+from .models import Arrow, Circle, Line, Rectangle, Text
 
 
 def draw_rectangle(draw: ImageDraw.ImageDraw, shape: Rectangle) -> None:
@@ -74,3 +75,20 @@ def draw_arrow(draw: ImageDraw.ImageDraw, shape: Arrow) -> None:
     right = (round(base_cx - px * half_width), round(base_cy - py * half_width))
     tip = (shape.x2, shape.y2)
     draw.polygon([left, right, tip], fill=color, outline=color)
+
+
+def draw_text(draw: ImageDraw.ImageDraw, shape: Text) -> None:
+    color = resolve_color(shape.color)
+    font = load_font(shape.font_size)
+    if shape.background is not None:
+        bg = resolve_color(shape.background)
+        # Measure text bounding box
+        left, top, right, bottom = draw.textbbox(
+            (shape.x, shape.y), shape.text, font=font, anchor="lt"
+        )
+        pad = shape.padding
+        draw.rectangle(
+            (left - pad, top - pad, right + pad, bottom + pad),
+            fill=bg,
+        )
+    draw.text((shape.x, shape.y), shape.text, fill=color, font=font, anchor="lt")

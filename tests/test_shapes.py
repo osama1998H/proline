@@ -101,3 +101,33 @@ class TestDrawArrow:
         assert_pixel(img, 172, 53, (255, 0, 0))
         # Well above the shaft is white
         assert_pixel_unchanged(img, 100, 20)
+
+
+from image_annotator_mcp.models import Text
+from image_annotator_mcp.shapes import draw_text
+
+
+class TestDrawText:
+    def test_red_text_paints_some_red_pixels(self):
+        shape = Text(type="text", x=20, y=20, text="HELLO", color="red", font_size=24)
+        img = _draw_on_blank(shape, draw_text)
+        rgb_pixels = img.convert("RGB").load()
+        # Sample a 60x30 region starting at (20, 20) and count red-ish pixels.
+        red_count = 0
+        for px in range(20, 90):
+            for py in range(20, 60):
+                r, g, b = rgb_pixels[px, py]
+                if r > 180 and g < 80 and b < 80:
+                    red_count += 1
+        assert red_count > 40, f"expected text glyphs to paint many red pixels, got {red_count}"
+
+    def test_background_rectangle_paints_solid(self):
+        shape = Text(
+            type="text",
+            x=20, y=20, text="OK",
+            color="white", font_size=24,
+            background="black", padding=4,
+        )
+        img = _draw_on_blank(shape, draw_text)
+        # A pixel inside the background rectangle but not on a glyph should be black-ish
+        assert_pixel(img, 21, 21, (0, 0, 0))
