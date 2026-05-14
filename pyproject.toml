@@ -1,0 +1,34 @@
+[project]
+name = "image-annotator-mcp"
+version = "0.1.0"
+description = "MCP server that draws annotation shapes (rectangle, circle, arrow, line, text, numbered callout) onto screenshots."
+requires-python = ">=3.11"
+dependencies = [
+  "mcp>=1.2.0",
+  "pillow>=10.4.0",
+  "pydantic>=2.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-asyncio>=0.23.0",
+]
+
+[project.scripts]
+image-annotator-mcp = "image_annotator_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/image_annotator_mcp"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/image_annotator_mcp/fonts/DejaVuSans.ttf" = "image_annotator_mcp/fonts/DejaVuSans.ttf"
+"src/image_annotator_mcp/fonts/LICENSE" = "image_annotator_mcp/fonts/LICENSE"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
