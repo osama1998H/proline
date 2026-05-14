@@ -56,6 +56,27 @@ Hex (`"#22C55E"`, `"#22C55E80"` for alpha), named (`"red"`, `"green"`, `"blue"`,
 `"yellow"`, `"orange"`, `"purple"`, `"black"`, `"white"`, `"cyan"`, `"magenta"`),
 or RGB / RGBA tuples (`[34, 197, 94]`, `[34, 197, 94, 128]`).
 
+### Coordinates: get them from the DOM, not from the screenshot
+
+The accuracy of every annotation this tool produces is determined entirely by
+the coordinates you pass in. An LLM looking at a rendered screenshot **cannot**
+read pixel coordinates accurately — visual estimates drift 10–50 px off the
+elements they're meant to mark, and that error is plainly visible in the output.
+
+The reliable pattern is:
+
+1. Capture the screenshot from a real browser session.
+2. In the same browser context, query the bounding rect of every element you
+   want to highlight (`element.getBoundingClientRect()` in JS, or
+   `locator.bounding_box()` in Playwright).
+3. Feed those exact `(x, y, width, height)` rects into `annotate_image`.
+
+Only fall back to LLM visual estimation for cases where no DOM element exists
+(an icon inside a canvas, a region of an image) and even then constrain it to
+small shapes where pixel error is hard to see (a small circle around a logo,
+not a large rectangle around a section). The MCP tool description repeats this
+guidance so a fresh agent picks it up without prior context.
+
 ### HiDPI screenshots from Playwright
 
 Playwright's `Locator.boundingBox()` returns CSS pixels. Its `page.screenshot()`

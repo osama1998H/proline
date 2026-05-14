@@ -155,6 +155,55 @@ class TestMcpToolReturnShape:
         assert Path(meta["saved_path"]).exists()
 
 
+class TestToolSchemaGuidance:
+    """v0.1.1 also rewrote the tool description to teach the canonical DOM-first
+    workflow at the MCP-schema level. If a future change deletes that guidance,
+    a fresh agent will fall back to eyeballing pixel coordinates from the screen-
+    shot and the accuracy property of the tool quietly collapses. These tests
+    pin the guidance in place.
+    """
+
+    def _schema(self):
+        import asyncio
+        from image_annotator_mcp.server import mcp
+
+        async def fetch():
+            return await mcp.list_tools()
+
+        tools = asyncio.run(fetch())
+        assert len(tools) == 1
+        return tools[0]
+
+    def test_description_says_dom_not_visual(self):
+        tool = self._schema()
+        desc = tool.description.lower()
+        # The two pieces of guidance an agent must internalise.
+        assert "getboundingclientrect" in desc, "description must point at the DOM API"
+        assert "do not estimate" in desc, "description must warn against visual estimation"
+
+    def test_description_documents_all_six_shapes(self):
+        desc = self._schema().description.lower()
+        for shape in ("rectangle", "circle", "arrow", "line", "text", "numbered_callout"):
+            assert shape in desc, f"description omits the {shape} shape"
+
+    def test_description_documents_coordinate_space_pair(self):
+        desc = self._schema().description.lower()
+        assert "coordinate_space" in desc
+        assert "device_scale" in desc
+        assert "css" in desc and "image" in desc
+
+    def test_every_parameter_has_a_description(self):
+        props = self._schema().inputSchema.get("properties", {})
+        required_params = {
+            "annotations", "input_path", "input_base64", "output_path",
+            "output_format", "coordinate_space", "device_scale", "include_image",
+        }
+        assert set(props.keys()) == required_params
+        for name, schema in props.items():
+            desc = schema.get("description") or ""
+            assert len(desc) > 30, f"param {name!r} has no useful description: {desc!r}"
+
+
 @pytest.mark.skipif(not SAMPLE_SOURCE.exists(), reason="reference sample not present")
 def test_smoke_annotate_real_screenshot(tmp_path):
     # Copy the sample so we don't write next to it.
