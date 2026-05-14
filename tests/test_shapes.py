@@ -131,3 +131,30 @@ class TestDrawText:
         img = _draw_on_blank(shape, draw_text)
         # A pixel inside the background rectangle but not on a glyph should be black-ish
         assert_pixel(img, 21, 21, (0, 0, 0))
+
+
+from image_annotator_mcp.models import NumberedCallout
+from image_annotator_mcp.shapes import draw_numbered_callout
+
+
+class TestDrawNumberedCallout:
+    def test_filled_circle_with_white_number(self):
+        shape = NumberedCallout(type="numbered_callout", x=100, y=50, number=3, color="red", radius=20)
+        img = _draw_on_blank(shape, draw_numbered_callout)
+        rgb = img.convert("RGB").load()
+        # Center of the callout should be red, white, or near-red (since '3' glyph lives there).
+        center = rgb[100, 50]
+        # Outside the circle should be unchanged white.
+        assert rgb[100, 5] == (255, 255, 255)
+        # At a pixel just inside the right edge, expect filled red.
+        far_right_inside = rgb[118, 50]
+        assert far_right_inside[0] > 180 and far_right_inside[1] < 80 and far_right_inside[2] < 80
+        # The glyph should paint at least one white pixel inside the circle.
+        white_inside = 0
+        for px in range(85, 116):
+            for py in range(35, 66):
+                if rgb[px, py] == (255, 255, 255):
+                    # is this pixel inside the circle?
+                    if (px - 100) ** 2 + (py - 50) ** 2 < 20 * 20:
+                        white_inside += 1
+        assert white_inside >= 5

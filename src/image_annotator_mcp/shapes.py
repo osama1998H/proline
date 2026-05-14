@@ -6,7 +6,7 @@ from PIL import ImageDraw
 
 from .colors import resolve_color
 from .fonts import load_font
-from .models import Arrow, Circle, Line, Rectangle, Text
+from .models import Arrow, Circle, Line, NumberedCallout, Rectangle, Text
 
 
 def draw_rectangle(draw: ImageDraw.ImageDraw, shape: Rectangle) -> None:
@@ -92,3 +92,22 @@ def draw_text(draw: ImageDraw.ImageDraw, shape: Text) -> None:
             fill=bg,
         )
     draw.text((shape.x, shape.y), shape.text, fill=color, font=font, anchor="lt")
+
+
+def draw_numbered_callout(draw: ImageDraw.ImageDraw, shape: NumberedCallout) -> None:
+    fill = resolve_color(shape.color)
+    box = (
+        shape.x - shape.radius,
+        shape.y - shape.radius,
+        shape.x + shape.radius,
+        shape.y + shape.radius,
+    )
+    draw.ellipse(box, fill=fill, outline=fill)
+    font = load_font(shape.font_size)
+    draw.text(
+        (shape.x, shape.y),
+        str(shape.number),
+        fill=(255, 255, 255, 255),
+        font=font,
+        anchor="mm",
+    )
