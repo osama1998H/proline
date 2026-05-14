@@ -213,8 +213,8 @@ def test_smoke_annotate_real_screenshot(tmp_path):
     result = annotate_image_tool(
         input_path=str(work),
         annotations=[
-            {"type": "rectangle", "x": 220, "y": 195, "width": 70, "height": 30, "color": "green", "line_width": 4},
-            {"type": "rectangle", "x": 398, "y": 195, "width": 95, "height": 30, "color": "green", "line_width": 4},
+            {"type": "rectangle", "x": 220, "y": 195, "width": 70, "height": 30, "color": "green", "line_width": "regular"},
+            {"type": "rectangle", "x": 398, "y": 195, "width": 95, "height": 30, "color": "green", "line_width": "regular"},
             {"type": "text", "x": 230, "y": 160, "text": "verified", "color": "red", "font_size": 14},
         ],
     )

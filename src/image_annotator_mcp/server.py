@@ -106,6 +106,8 @@ SHAPES: each annotation is a dict with a `type` field and shape-specific fields:
 
 Annotations are applied in array order; later shapes overdraw earlier ones.
 Colors accept hex (`"#22C55E"`), CSS names (`"red"`, `"green"`, ...), or RGB(A) tuples.
+`line_width` is a preset keyword — one of `"thin"` (2 CSS px), `"regular"` (4),
+or `"bold"` (7). Raw integers are rejected; pick a preset.
 
 RETURNS: a TextContent block with `{saved_path, width, height}` JSON, plus an inline
 ImageContent block of the annotated image. Set `include_image=false` for batch
@@ -171,8 +173,8 @@ def annotate_image(
         Field(description=(
             "Required when coordinate_space='css'. Set to the deviceScaleFactor that "
             "was active when the screenshot was captured (usually 1 or 2). Affects "
-            "every coordinate AND every size-like field: line_width, radius, font_size, "
-            "head_size, padding."
+            "every coordinate AND every size-like field: radius, font_size, "
+            "head_size, padding, and the resolved px value of the line_width preset."
         )),
     ] = None,
     include_image: Annotated[

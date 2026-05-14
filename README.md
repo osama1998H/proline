@@ -32,8 +32,8 @@ as a file on disk and as an inline MCP `ImageContent` block.
   "coordinate_space": "css",
   "device_scale": 2.0,
   "annotations": [
-    {"type": "rectangle", "x": 220, "y": 195, "width": 70,  "height": 30, "color": "green"},
-    {"type": "arrow",     "x1": 600, "y1": 100, "x2": 728, "y2": 195, "color": "red"},
+    {"type": "rectangle", "x": 220, "y": 195, "width": 70,  "height": 30, "color": "green", "line_width": "regular"},
+    {"type": "arrow",     "x1": 600, "y1": 100, "x2": 728, "y2": 195, "color": "red",   "line_width": "bold"},
     {"type": "text",      "x": 600, "y": 90,   "text": "verified", "color": "red"}
   ]
 }
@@ -55,6 +55,20 @@ as a file on disk and as an inline MCP `ImageContent` block.
 Hex (`"#22C55E"`, `"#22C55E80"` for alpha), named (`"red"`, `"green"`, `"blue"`,
 `"yellow"`, `"orange"`, `"purple"`, `"black"`, `"white"`, `"cyan"`, `"magenta"`),
 or RGB / RGBA tuples (`[34, 197, 94]`, `[34, 197, 94, 128]`).
+
+### Stroke widths
+
+`line_width` is a preset keyword, not a free integer — pick one of:
+
+| Keyword     | CSS px |
+|-------------|--------|
+| `"thin"`    | 2      |
+| `"regular"` | 4 (default) |
+| `"bold"`    | 7      |
+
+When `coordinate_space="css"`, the resolved px value is multiplied by
+`device_scale` before drawing. Passing a raw int (e.g. `"line_width": 5`)
+is rejected at validation time.
 
 ### Coordinates: get them from the DOM, not from the screenshot
 
@@ -88,10 +102,10 @@ coords into this MCP, set:
 ```
 
 …with `device_scale` equal to the active `deviceScaleFactor`. The MCP will
-scale every coordinate, plus every size-like field: `line_width`, `radius`,
-`font_size`, `head_size`, and `padding`. If your screenshot was taken
-at 1× (or you've already converted to image-pixel coords), leave
-`coordinate_space` at its default of `"image"`.
+scale every coordinate, plus every size-like field: `radius`, `font_size`,
+`head_size`, `padding`, and the resolved px value of the `line_width` preset.
+If your screenshot was taken at 1× (or you've already converted to image-pixel
+coords), leave `coordinate_space` at its default of `"image"`.
 
 ### Returns
 

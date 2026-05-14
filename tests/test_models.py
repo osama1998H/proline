@@ -9,6 +9,7 @@ from image_annotator_mcp.models import (
     Text,
     NumberedCallout,
     AnnotateImageInput,
+    LINE_WIDTH_PX,
     parse_annotation,
 )
 
@@ -59,6 +60,47 @@ class TestNumberedCallout:
         n = NumberedCallout(type="numbered_callout", x=10, y=20, number=1)
         assert n.radius == 14
         assert n.font_size == 16
+
+
+class TestLineWidth:
+    def test_keyword_resolves_to_px(self):
+        for keyword, expected_px in LINE_WIDTH_PX.items():
+            r = Rectangle(type="rectangle", x=0, y=0, width=10, height=10, line_width=keyword)
+            assert r.line_width == expected_px
+
+    def test_default_is_regular(self):
+        r = Rectangle(type="rectangle", x=0, y=0, width=10, height=10)
+        assert r.line_width == LINE_WIDTH_PX["regular"]
+
+    def test_raw_int_rejected(self):
+        with pytest.raises(ValidationError):
+            Rectangle(type="rectangle", x=0, y=0, width=10, height=10, line_width=5)
+
+    def test_unknown_keyword_rejected(self):
+        with pytest.raises(ValidationError):
+            Rectangle(type="rectangle", x=0, y=0, width=10, height=10, line_width="thicc")
+
+    def test_none_rejected(self):
+        with pytest.raises(ValidationError):
+            Rectangle(type="rectangle", x=0, y=0, width=10, height=10, line_width=None)
+
+    def test_applies_to_all_stroked_shapes(self):
+        c = Circle(type="circle", x=0, y=0, radius=5, line_width="bold")
+        a = Arrow(type="arrow", x1=0, y1=0, x2=5, y2=5, line_width="thin")
+        ln = Line(type="line", x1=0, y1=0, x2=5, y2=5, line_width="regular")
+        assert c.line_width == LINE_WIDTH_PX["bold"]
+        assert a.line_width == LINE_WIDTH_PX["thin"]
+        assert ln.line_width == LINE_WIDTH_PX["regular"]
+
+    def test_model_copy_preserves_int_update(self):
+        # annotate._scale relies on model_copy(update={"line_width": <int>})
+        # bypassing the BeforeValidator that rejects raw ints. If a future
+        # Pydantic config (e.g. revalidate_instances="always") breaks that
+        # bypass, the css→image scaling path stops working — this test pins
+        # the behavior so the regression is loud.
+        r = Rectangle(type="rectangle", x=0, y=0, width=10, height=10, line_width="regular")
+        scaled = r.model_copy(update={"line_width": 13})
+        assert scaled.line_width == 13
 
 
 class TestParseAnnotation:

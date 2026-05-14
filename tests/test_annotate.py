@@ -54,7 +54,7 @@ def test_css_space_2x_scales_coords(blank_white):
     payload = _load_input(
         blank_white,
         annotations=[
-            {"type": "rectangle", "x": 5, "y": 5, "width": 10, "height": 10, "color": "red", "line_width": 2}
+            {"type": "rectangle", "x": 5, "y": 5, "width": 10, "height": 10, "color": "red", "line_width": "thin"}
         ],
         coordinate_space="css",
         device_scale=2.0,

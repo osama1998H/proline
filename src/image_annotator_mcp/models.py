@@ -2,15 +2,60 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, TypeAdapter, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, TypeAdapter, WithJsonSchema, model_validator
 
 
 Color = Union[str, list[int]]
 
 
+# Stroke-width presets. Keywords map to base CSS-pixel values; the css→image
+# scaling step (annotate._scale) multiplies these by device_scale.
+LINE_WIDTH_PX: dict[str, int] = {"thin": 2, "regular": 4, "bold": 7}
+_LINE_WIDTH_DEFAULT_KEYWORD = "regular"
+_LINE_WIDTH_DEFAULT_PX = LINE_WIDTH_PX[_LINE_WIDTH_DEFAULT_KEYWORD]
+
+
+def _resolve_line_width(v: Any) -> int:
+    # External callers must pass a keyword string. annotate._scale writes a
+    # scaled int back via model_copy(update=...), which in Pydantic v2 does NOT
+    # re-run BeforeValidator — that bypass is load-bearing and pinned by
+    # test_models.TestLineWidth.test_model_copy_preserves_int_update.
+    if isinstance(v, bool) or not isinstance(v, str):
+        raise ValueError(
+            f"line_width must be one of {sorted(LINE_WIDTH_PX)} "
+            f"(e.g. {_LINE_WIDTH_DEFAULT_KEYWORD!r}), got {type(v).__name__}={v!r}"
+        )
+    if v not in LINE_WIDTH_PX:
+        raise ValueError(
+            f"line_width must be one of {sorted(LINE_WIDTH_PX)}, got {v!r}"
+        )
+    return LINE_WIDTH_PX[v]
+
+
+LineWidth = Annotated[
+    int,
+    BeforeValidator(_resolve_line_width),
+    WithJsonSchema({
+        "type": "string",
+        "enum": sorted(LINE_WIDTH_PX),
+        "default": _LINE_WIDTH_DEFAULT_KEYWORD,
+        "description": (
+            "Stroke preset. Keywords map to CSS-pixel values: "
+            "'thin'=2, 'regular'=4, 'bold'=7. When coordinate_space='css' the "
+            "resolved value is multiplied by device_scale before drawing."
+        ),
+    }),
+]
+
+
 class _ShapeBase(BaseModel):
+    # validate_default ensures the keyword default flows through BeforeValidator
+    # (so the stored value is the resolved int) and the JSON schema's default
+    # stays in step with the enum.
+    model_config = ConfigDict(validate_default=True)
+
     color: Color = "#22C55E"
-    line_width: int = Field(default=4, ge=1)
+    line_width: LineWidth = _LINE_WIDTH_DEFAULT_KEYWORD  # type: ignore[assignment]
 
 
 class Rectangle(_ShapeBase):

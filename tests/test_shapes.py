@@ -30,7 +30,7 @@ class TestDrawRectangle:
         shape = Rectangle(
             type="rectangle",
             x=20, y=20, width=60, height=40,
-            color="red", fill="red", line_width=2,
+            color="red", fill="red", line_width="thin",
         )
         img = _draw_on_blank(shape, draw_rectangle)
         # Interior should now be red
@@ -40,10 +40,10 @@ class TestDrawRectangle:
         shape = Rectangle(
             type="rectangle",
             x=20, y=20, width=60, height=40,
-            color="#22C55E", line_width=8,
+            color="#22C55E", line_width="bold",
         )
         img = _draw_on_blank(shape, draw_rectangle)
-        # 4 pixels inside the top edge should still be green (line_width=8)
+        # 4 pixels inside the top edge should still be green ('bold' = 7 px stroke)
         assert_pixel(img, 50, 24, (34, 197, 94))
         # 10 pixels inside the top edge should be white again
         assert_pixel_unchanged(img, 50, 32)
@@ -74,7 +74,7 @@ from image_annotator_mcp.shapes import draw_line
 
 class TestDrawLine:
     def test_horizontal_red(self):
-        shape = Line(type="line", x1=10, y1=50, x2=190, y2=50, color="red", line_width=2)
+        shape = Line(type="line", x1=10, y1=50, x2=190, y2=50, color="red", line_width="thin")
         img = _draw_on_blank(shape, draw_line)
         # On-line pixel is red
         assert_pixel(img, 100, 50, (255, 0, 0))
@@ -90,7 +90,7 @@ class TestDrawArrow:
     def test_horizontal_arrow_has_line_and_head(self):
         shape = Arrow(
             type="arrow", x1=20, y1=50, x2=180, y2=50,
-            color="red", line_width=3, head_size=10,
+            color="red", line_width="regular", head_size=10,
         )
         img = _draw_on_blank(shape, draw_arrow)
         # Somewhere along the shaft is red
