@@ -79,7 +79,7 @@ The `annotations` array contains objects discriminated by the `type` field. The 
 - `rectangle.x, y` is the top-left corner; `width, height` are positive.
 - `circle.x, y` is the centre; `radius` is positive.
 - `arrow` draws from `(x1, y1)` to `(x2, y2)` with a triangular head at the end.
-- `text.x, y` is the text's top-left baseline; rendering uses a bundled DejaVu Sans font so the server has no dependency on the host's installed fonts.
+- `text.x, y` is the top-left corner of the text's bounding box (Pillow's default `anchor="la"` equivalent); rendering uses a bundled DejaVu Sans font so the server has no dependency on the host's installed fonts.
 - `numbered_callout` is a filled circle with `number` centred inside in white text — useful for "step 1, step 2, step 3" overlays on a single screenshot.
 
 ### Defaults (chosen to match the sample images)
@@ -110,7 +110,7 @@ Playwright's `Locator.boundingBox()` returns coordinates in **CSS pixels**. Play
 The MCP handles this explicitly:
 
 - `coordinate_space: "image"` (default): annotation coordinates are already in image-pixel space. Nothing is scaled. This is what the agent should use when it has manually computed image-relative coords, or when the screenshot was taken at `deviceScaleFactor = 1`.
-- `coordinate_space: "css"` with `device_scale: <n>`: the MCP multiplies every coordinate, every `line_width`, every `radius`, every `font_size`, and every `head_size` by `<n>` before drawing. `<n>` must match the `deviceScaleFactor` that was active when the screenshot was captured.
+- `coordinate_space: "css"` with `device_scale: <n>`: the MCP multiplies every coordinate, every `line_width`, every `radius`, every `font_size`, and every `head_size` by `<n>` before drawing. `<n>` must match the `deviceScaleFactor` that was active when the screenshot was captured. Fractional scales (e.g. `1.5`) are handled by scaling the rectangle's right and bottom edges (`x + width`, `y + height`) separately from its origin and rounding each with Python's `round` (banker's rounding), then deriving the rendered width/height from the rounded edges. This keeps right and bottom edges stable rather than letting independent rounding of the width drift them by a pixel.
 
 If `coordinate_space="css"` is set without `device_scale`, the tool errors. The error message states this constraint explicitly so the agent learns to pair the two.
 
